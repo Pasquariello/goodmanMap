@@ -1,198 +1,252 @@
 import React, {useState, useEffect} from 'react';
 import GoogleMapReact from 'google-map-react';
-import Marker from './Marker.jsx';
 import axios from 'axios';
 
-import './map.css'
 
+// TODO 
 /*
-TODO: 
-https://github.com/google-map-react/google-map-react-examples/blob/master/src/examples/Main.js#L40
+    - UPDATE ALL TEST DATA VALUES WITH REAL DATA - in order to determine which branch is the  "home" 
+    branch I used the home key, Seeing as I have not received the 
+    bearer token to make a proper request this test data and the values
+    used will need to be changed to reflect the correct data
+    - with correct bearer token uncomment fetch call
+    - current console warning is due to google map react library, there is a ticket in for this to be 
+    resolved by google-map-react team it will NOT affect the application
+    - handle setHomeBranch function
 */
-
-
+const TEST_PLACES = [
+    {
+        _id: 1,
+        name: 'Branch 1',
+        address: '1600 Amphitheatre Parkway, Mountain View, california.',
+        lat: 37.42216,
+        lng: -122.08427,
+        home: true,
+    },
+    {
+        _id: 2,
+        name: 'Branch 2',
+        address: '1600 Amphitheatre Parkway, Mountain View, california.',
+        lat: 38.42216,
+        lng: -122.08427,
+        home: false,
+    },
+    {
+        _id: 3,
+        name: 'Branch 3',
+        address: '1600 Amphitheatre Parkway, Mountain View, california.',
+        lat: 38.22236,
+        lng: -122.08427,
+        home: false,
+    },
+];
 
 const Map = () => {
+    const [ places, setPlaces ] = useState([]);
+    const [ errorMsg, setErrorMsg ] = useState();
+
+    const homeIcon = {
+        path: 'M 0,0 C -2,-20 -10,-22 -10,-30 A 10,10 0 1,1 10,-30 C 10,-22 2,-20 0,0 z M -2,-30 a 2,2 0 1,1 4,0 2,2 0 1,1 -4,0',
+        fillColor: 'blue',
+        fillOpacity: 1,
+        strokeColor: '#000',
+        strokeWeight: 2,
+        scale: 1,
+    }
 
     // Return map bounds based on list of places
-const getInfoWindowString = (place) => `
-<div>
-    <div style="font-size: 16px;">
-        ${place.name}
-    </div>
-    <div style="font-size: 14px; color: grey;">
-        ${place.address}
-    </div>
-</div>`;
+    // This is the infowwindow content any additional
+    const getInfoWindowString = (place) => {
+        
+        // Must return string NOT jsx
+        return (
+            `<div 
+                style="
+                    min-height: 100px;
+                    width: 300px;
+                    display: flex; 
+                    flex-direction: column;
+                    align-items: start;
+                    justify-content: space-around;
+                    text-align: left;
+                "
+            >
+                <div 
+                    style="font-size: 16px;"
+                    width: 300px;
+                    display: flex !important; 
+                    justify-content: space-between;
 
-// <div style="font-size: 16px;">
-//     ${place.name}
-//   </div>
-//   <div style="font-size: 14px;">
-//     <span style="color: grey;">
-//     ${place.rating}
-//     </span>
-//     <span style="color: orange;">${String.fromCharCode(9733).repeat(Math.floor(place.rating))}</span><span style="color: lightgrey;">${String.fromCharCode(9733).repeat(5 - Math.floor(place.rating))}</span>
-//   </div>
-//   <div style="font-size: 14px; color: grey;">
-//     ${place.types[0]}
-//   </div>
-//   <div style="font-size: 14px; color: grey;">
-//     ${'$'.repeat(place.price_level)}
-//   </div>
-//   <div style="font-size: 14px; color: green;">
-//     ${place.opening_hours.open_now ? 'Open' : 'Closed'}
-//   </div>
+                >   
+                    <p>Branch Name: ${place.branchName}</p> 
+                    <p>Branch Number: ${place.branchNumber}</p> 
+                
+                </div>
+                <div>
+                    ${
+                        place.home ? `<b>home branch</b>` : ``
+                    }
+                </div>
+                <div style="color: grey;">
+                    <p>${place.address}</p>
+                </div>
+            </div>`
+        )
+    }    
 
-const getMapBounds = (map, maps, places) => {
-const bounds = new maps.LatLngBounds();
-
-places.forEach((place) => {
-  bounds.extend(new maps.LatLng(
-    place.lat,
-    place.lng,
-  ));
-});
-return bounds;
-};
-
-// Re-center map when resizing the window
-const bindResizeListener = (map, maps, bounds) => {
-    maps.event.addDomListenerOnce(map, 'idle', () => {
-        maps.event.addDomListener(window, 'resize', () => {
-            map.fitBounds(bounds);
-        });
-    });
-};
-
-// Fit map to its bounds after the api is loaded
-const apiIsLoaded = (map, maps, places) => {
-// Get bounds by our places
-const bounds = getMapBounds(map, maps, places);
-// Fit map to bounds
-map.fitBounds(bounds);
-// Bind the resize listener
-bindResizeListener(map, maps, bounds);
-
-const infowindow = new maps.InfoWindow();
-const markers = places.map((place) => {
-    return new maps.Marker({
-      placeData: place,
-      position: {
-        lat: place.lat,
-        lng: place.lng, //place.geometry.location.lng
-      },
-      map,
-    });
-  });
-  
-markers.forEach((marker, i) => {
-  marker.addListener('click', (e) => {
-    infowindow.setContent(getInfoWindowString(marker.placeData))
-    infowindow.open(map, marker)
-  });
-});
-};
-
-    const testPlace = [
-        {
-            _id: 1,
-            name: 'Branch 1',
-            address: '1600 Amphitheatre Parkway, Mountain View, california.',
-            lat: 37.42216,
-            lng: -122.08427,
-        },
-        {
-            _id: 2,
-            name: 'Branch 2',
-            address: '1600 Amphitheatre Parkway, Mountain View, california.',
-            lat: 38.42216,
-            lng: -122.08427,
-           
-        },
-        {
-            _id: 3,
-            name: 'Branch 3',
-            address: '1600 Amphitheatre Parkway, Mountain View, california.',
-            lat: 38.22236,
-            lng: -122.08427,
-           
-        },
-    ]
     
-    const [ places, setPlaces ] = useState(testPlace);
+    /* 
+        html elems MUST be written with js in order to handle adding 
+        a button with an action to infoWindow
+    */
+    const renderInfoWindowContent = (place) => {
 
-    const [displayMarker, setDisplayMarker] = useState();
+        const div = document.createElement("div");
+        div.id = "container";
+        div.innerHTML += getInfoWindowString(place);
 
-	const _onChildClick = (key, childProps) => {
-        console.log('h')
-		if (displayMarker && displayMarker === childProps.branch._id) {
-			setDisplayMarker()
-		} else {
-			setDisplayMarker(childProps.branch._id)
-		}
-	}
+        const button = document.createElement("button");
+        button.onclick = () => setHomeBranch(place);
+        button.innerHTML = 'Set As Home Branch';
 
-    const fetchData = async () => {
-        const config = {
-            headers: { Authorization: `Bearer ${'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IkZ4dV…ariJBDuAZ6UrQPZXevmqzQEcfwBpq85AdjS2RKMVCeGBblEIA'}` }
-        };
-        const encodedString = new Buffer('eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IkZ4dV…ariJBDuAZ6UrQPZXevmqzQEcfwBpq85AdjS2RKMVCeGBblEIA').toString('base64');
+        div.appendChild(button);
+
+        return div
+    }
+
+    const setHomeBranch = (place) => {
+        console.log('set home:', place);
+        // handle call 
+    }
+
+      
+
+    const getMapBounds = (map, maps, places) => {
+        const bounds = new maps.LatLngBounds();
+
+        places.forEach((place) => {
+            bounds.extend(new maps.LatLng(
+                place.location[1], // lat
+                place.location[0] // lng
+            ));
+        });
+        return bounds;
+    };
+
+    // Re-center map when resizing the window
+    const bindResizeListener = (map, maps, bounds) => {
+        maps.event.addDomListenerOnce(map, 'idle', () => {
+            maps.event.addDomListener(window, 'resize', () => {
+                map.fitBounds(bounds);
+            });
+        });
+    };
+
+    // Fit map to its bounds after the api is loaded
+    const apiIsLoaded = (map, maps, places) => {
+
+        // Get bounds by our places
+        const bounds = getMapBounds(map, maps, places);
+        // Fit map to bounds
+        map.fitBounds(bounds);
+        // Bind the resize listener
+        bindResizeListener(map, maps, bounds);
+
+        const infowindow = new maps.InfoWindow();
+        const markers = places.map((place) => {
+            
+            const {home, location} = place;
+            return new maps.Marker({  
+                // if marker is for "home branch" set icon to custom Blue Icon                     
+                ...home && {icon: homeIcon},
+                placeData: place,
+                position: {
+                    lat: location[1], // lat
+                    lng: location[0], // lng
+                },
+                map,
+            });
+        });
+        
+        // Marker click event open info window
+        markers.forEach(marker => {
+            marker.addListener('click', () => {
+                infowindow.setContent(
+                    renderInfoWindowContent(marker.placeData)
+                );
+                infowindow.open(map, marker)
+            });
+        });
+    };
+    
+
+    const fetchMapData = async (source) => {
+       
         await axios.get(
             'https://stageapi.daikincloud.io/1.5/goodman/branches', 
             {
                 headers: {
-                  'Authorization': `Bearer ${encodedString}`,
+                  'Authorization': `Bearer`,
                   'Content-Type': 'application/json'
-                }
-            })
-            .then(function (response) {
-                // handle success
-                console.log('RES', response);
-            })
-            .catch(function (error) {
-                // handle error
-                console.log('ERROR', error);
-            })
-            .finally(function () {
-                // always executed
-            });
+                },
+                cancelToken: source.token,
+            }
+        )
+        .then(function (response) {
+            // handle success
+            console.log(response.data)
+            setPlaces(response.data);
+        })
+        .catch(function (error) {
+            // handle error
+            if (axios.isCancel(error)) {
+
+            } else {
+                setErrorMsg('There was an error loading map');
+            }
+            setErrorMsg('There was an error loading map');
+        });
     }
 
-    useEffect(() => {
-       fetchData()
-    }, [])
 
+    useEffect(() => {
+        /*
+            source - used to cancel call if user navs away before call completes
+            necessary to prevent any memory leaks 
+        */
+        const source = axios.CancelToken.source()
+        
+        // TODO - uncomment once have bearer token
+        fetchMapData(source);
+
+        return () => {
+            source.cancel()
+        }
+    }, []);
+
+    
+    const renderMap = () => (
+        // TODO - update height once placed
+        <div style={{ height: '600px', width: '100%' }}>
+            <GoogleMapReact
+                bootstrapURLKeys={{ key: 'AIzaSyBguMmo9uc4RdPS3N7qWH2AiGZQ9Vf4vTw' }}
+                defaultCenter={{
+                    lat: 37.42216,
+                    lng: -122.08427,
+                }}
+                defaultZoom={17}
+                yesIWantToUseGoogleMapApiInternals
+                onGoogleApiLoaded={({ map, maps }) => apiIsLoaded(map, maps, places)}
+            >
+            </GoogleMapReact>
+        </div>
+    );
 
     return (
         <>
             <h1>Map</h1>
-            <div style={{ height: '600px', width: '100%' }}>
-
-                <GoogleMapReact
-                    bootstrapURLKeys={{ key: 'AIzaSyBguMmo9uc4RdPS3N7qWH2AiGZQ9Vf4vTw' }}
-                    defaultCenter={{
-                        lat: 37.42216,
-                        lng: -122.08427,
-                    }}
-                    defaultZoom={17}
-                    yesIWantToUseGoogleMapApiInternals
-                    onGoogleApiLoaded={({ map, maps }) => apiIsLoaded(map, maps, places)}
-                    onChildClick={_onChildClick}
-                >
-                {/* {
-                    places.map(branch => ( 
-                        <Marker
-                            show={displayMarker}
-							branch={branch}
-                            key={branch._id}
-                            lat={branch.lat}
-                            lng={branch.lng}
-                        />
-                    ))
-                } */}
-                </GoogleMapReact>
-            </div>
+            {places.length ? renderMap() : null}
+            {errorMsg ?  errorMsg : null }
         </>
     )
 }

@@ -69,6 +69,10 @@ const Map = (props) => {
                     ${
                         place.branchNumber === defaultBranch ? `<b>Default branch</b>` : ``
                     }
+
+                    ${
+                        place.branchNumber === currentBranch ? `<b>Current branch</b>` : ``
+                    }
                 </div>
                 <div style="color: grey;">
                     <p>${place.address}</p>

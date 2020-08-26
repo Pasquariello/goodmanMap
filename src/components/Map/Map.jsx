@@ -88,12 +88,12 @@ const Map = (props) => {
         div.id = "container";
         div.innerHTML += getInfoWindowString(place);
 
-        const button = document.createElement("button");
-        button.onclick = () => setDefaultBranch(place);
-        button.innerHTML = 'Set As Home Branch';
+        const defaultBranchButton = document.createElement("button");
+        defaultBranchButton.onclick = () => setDefaultBranch(place);
+        defaultBranchButton.innerHTML = 'Set As Default Branch';
 
         // TODO - uncomment when ready to handle set current  and default branch
-        //div.appendChild(button);
+        //div.appendChild(defaultBranchButton);
 
         return div
     }
@@ -200,7 +200,7 @@ const Map = (props) => {
         )
         .then(function (response) {
             // handle success
-            console.log('set',response)
+            console.log(response)
         })
         .catch(function (error) {
             // handle error

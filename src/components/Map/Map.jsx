@@ -1,61 +1,44 @@
 import React, {useState, useEffect} from 'react';
+import PropTypes from 'prop-types';
 import GoogleMapReact from 'google-map-react';
 import axios from 'axios';
 
 
 // TODO 
 /*
-    - UPDATE ALL TEST DATA VALUES WITH REAL DATA - in order to determine which branch is the  "home" 
-    branch I used the home key, Seeing as I have not received the 
-    bearer token to make a proper request this test data and the values
-    used will need to be changed to reflect the correct data
-    - with correct bearer token uncomment fetch call
+    - set token - PLACEHOLDER_TOKEN
+    - set google map api key- PLACEHOLDER_GOOGLE_MAP_API_KEY
     - current console warning is due to google map react library, there is a ticket in for this to be 
     resolved by google-map-react team it will NOT affect the application
-    - handle setHomeBranch function
+    - handle setDefaultBranch function and set up set currentBranch
 */
-const TEST_PLACES = [
-    {
-        _id: 1,
-        name: 'Branch 1',
-        address: '1600 Amphitheatre Parkway, Mountain View, california.',
-        lat: 37.42216,
-        lng: -122.08427,
-        home: true,
-    },
-    {
-        _id: 2,
-        name: 'Branch 2',
-        address: '1600 Amphitheatre Parkway, Mountain View, california.',
-        lat: 38.42216,
-        lng: -122.08427,
-        home: false,
-    },
-    {
-        _id: 3,
-        name: 'Branch 3',
-        address: '1600 Amphitheatre Parkway, Mountain View, california.',
-        lat: 38.22236,
-        lng: -122.08427,
-        home: false,
-    },
-];
 
-const Map = () => {
+const Map = (props) => {
+
+    const { defaultBranch, currentBranch } = props;     
     const [ places, setPlaces ] = useState([]);
     const [ errorMsg, setErrorMsg ] = useState();
 
-    const homeIcon = {
-        path: 'M 0,0 C -2,-20 -10,-22 -10,-30 A 10,10 0 1,1 10,-30 C 10,-22 2,-20 0,0 z M -2,-30 a 2,2 0 1,1 4,0 2,2 0 1,1 -4,0',
-        fillColor: 'blue',
-        fillOpacity: 1,
-        strokeColor: '#000',
-        strokeWeight: 2,
-        scale: 1,
+    const renderSpecialIcon = (type) => {
+        const colors = {
+            current: 'green',
+            default: 'blue'
+        }
+
+        return  {
+            path: 'M 0,0 C -2,-20 -10,-22 -10,-30 A 10,10 0 1,1 10,-30 C 10,-22 2,-20 0,0 z M -2,-30 a 2,2 0 1,1 4,0 2,2 0 1,1 -4,0',
+            fillColor:  colors[type],
+            fillOpacity: 1,
+            strokeColor: '#000',
+            strokeWeight: 1,
+            scale: 1,
+        }
     }
 
+    // START MAP FUNCTIONS
+
     // Return map bounds based on list of places
-    // This is the infowwindow content any additional
+    // This is the infowindow content any additional
     const getInfoWindowString = (place) => {
         
         // Must return string NOT jsx
@@ -78,13 +61,13 @@ const Map = () => {
                     justify-content: space-between;
 
                 >   
-                    <p>Branch Name: ${place.branchName}</p> 
+                    <h3>Branch Name: ${place.branchName}</h3> 
                     <p>Branch Number: ${place.branchNumber}</p> 
                 
                 </div>
                 <div>
                     ${
-                        place.home ? `<b>home branch</b>` : ``
+                        place.branchNumber === defaultBranch ? `<b>home branch</b>` : ``
                     }
                 </div>
                 <div style="color: grey;">
@@ -106,20 +89,14 @@ const Map = () => {
         div.innerHTML += getInfoWindowString(place);
 
         const button = document.createElement("button");
-        button.onclick = () => setHomeBranch(place);
+        button.onclick = () => setDefaultBranch(place);
         button.innerHTML = 'Set As Home Branch';
 
+        // TODO - uncomment when ready to handle set current  and default branch
         div.appendChild(button);
 
         return div
     }
-
-    const setHomeBranch = (place) => {
-        console.log('set home:', place);
-        // handle call 
-    }
-
-      
 
     const getMapBounds = (map, maps, places) => {
         const bounds = new maps.LatLngBounds();
@@ -155,10 +132,11 @@ const Map = () => {
         const infowindow = new maps.InfoWindow();
         const markers = places.map((place) => {
             
-            const {home, location} = place;
+            const {location, branchNumber} = place;
             return new maps.Marker({  
-                // if marker is for "home branch" set icon to custom Blue Icon                     
-                ...home && {icon: homeIcon},
+                // if marker is for "default branch" set icon to custom Blue Icon                     
+                ...branchNumber === defaultBranch && {icon: renderSpecialIcon('default')},
+                ...branchNumber === currentBranch && {icon: renderSpecialIcon('current')},
                 placeData: place,
                 position: {
                     lat: location[1], // lat
@@ -178,6 +156,7 @@ const Map = () => {
             });
         });
     };
+    // END MAP FUNCTIONS
     
 
     const fetchMapData = async (source) => {
@@ -186,7 +165,7 @@ const Map = () => {
             'https://stageapi.daikincloud.io/1.5/goodman/branches', 
             {
                 headers: {
-                  'Authorization': `Bearer`,
+                  'Authorization': `Bearer ${PLACEHOLDER_TOKEN}`,
                   'Content-Type': 'application/json'
                 },
                 cancelToken: source.token,
@@ -194,16 +173,38 @@ const Map = () => {
         )
         .then(function (response) {
             // handle success
-            console.log(response.data)
             setPlaces(response.data);
         })
         .catch(function (error) {
             // handle error
-            if (axios.isCancel(error)) {
-
-            } else {
+            if (!axios.isCancel(error)) {
                 setErrorMsg('There was an error loading map');
             }
+            console.log(error)
+        });
+    }
+
+    const setDefaultBranch = async (branchNumber) => {
+        await axios.put(
+            'https://stageapi.daikincloud.io/1.5/user/profile', 
+            {
+                headers: {
+                  'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0YXlsb3JAcGFzcS5uZXQiLCJpc3MiOiJkYWlraW4uaW8iLCJpYXQiOjE1OTgyNzcxMTEsImV4cCI6MTkxMzYzNzExMSwiZHVyYWJsZSI6dHJ1ZX0.1e6VRfjyx-kEDwW2klEjNJNjMqtvqMRqzGWMvv2EwUk`,
+                  'Content-Type': 'application/json'
+                },
+                data: {
+                    "email": "greg@pasq.net",
+                    "defaultBranch": branchNumber,
+                }
+            }
+        )
+        .then(function (response) {
+            // handle success
+            console.log('set',response)
+        })
+        .catch(function (error) {
+            // handle error
+            console.log(error)
             setErrorMsg('There was an error loading map');
         });
     }
@@ -216,7 +217,6 @@ const Map = () => {
         */
         const source = axios.CancelToken.source()
         
-        // TODO - uncomment once have bearer token
         fetchMapData(source);
 
         return () => {
@@ -229,7 +229,7 @@ const Map = () => {
         // TODO - update height once placed
         <div style={{ height: '600px', width: '100%' }}>
             <GoogleMapReact
-                bootstrapURLKeys={{ key: 'AIzaSyBguMmo9uc4RdPS3N7qWH2AiGZQ9Vf4vTw' }}
+                bootstrapURLKeys={{ key: PLACEHOLDER_GOOGLE_MAP_API_KEY }}
                 defaultCenter={{
                     lat: 37.42216,
                     lng: -122.08427,
@@ -244,11 +244,15 @@ const Map = () => {
 
     return (
         <>
-            <h1>Map</h1>
             {places.length ? renderMap() : null}
             {errorMsg ?  errorMsg : null }
         </>
     )
 }
+
+Map.propTypes = {
+    defaultBranch: PropTypes.string.isRequired,
+    currentBranch: PropTypes.string.isRequired,
+};
 
 export default Map;

@@ -93,7 +93,7 @@ const Map = (props) => {
         button.innerHTML = 'Set As Home Branch';
 
         // TODO - uncomment when ready to handle set current  and default branch
-        div.appendChild(button);
+        //div.appendChild(button);
 
         return div
     }
